@@ -173,6 +173,9 @@
     .storage-button { flex: 0 0 auto; padding: 7px 10px; border: 1px solid #cbd9ce; border-radius: 4px; color: var(--green-dark); background: var(--surface); font-size: 12px; font-weight: 700; }
     .storage-button:hover:not(:disabled) { border-color: var(--green); background: white; }
     .storage-button:disabled { cursor: not-allowed; opacity: 0.6; }
+    .storage-actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 7px; }
+    .storage-button-primary { border-color: var(--green); color: white; background: var(--green); }
+    .storage-button-primary:hover:not(:disabled) { color: white; background: var(--green-dark); }
 
     @media (max-width: 700px) {
       .page { width: min(100% - 28px, 520px); padding-top: 23px; }
@@ -205,7 +208,10 @@
 <body>
   <div class="storage-notice" id="storage-notice" role="status" aria-live="polite">
     <span id="storage-message">Velg datafila for å starte.</span>
-    <button class="storage-button" id="storage-button" type="button">Velg datafil</button>
+    <div class="storage-actions">
+      <button class="storage-button storage-button-primary" id="create-storage-button" type="button">Opprett data.json i mappe</button>
+      <button class="storage-button" id="storage-button" type="button">Velg eksisterende fil</button>
+    </div>
   </div>
   <main class="page" id="app" inert>
     <header class="topbar">
@@ -374,6 +380,7 @@
     const nextMonthButton = document.querySelector("#next-month");
     const storageMessage = document.querySelector("#storage-message");
     const storageButton = document.querySelector("#storage-button");
+    const createStorageButton = document.querySelector("#create-storage-button");
     const app = document.querySelector("#app");
 
     let legacyData = null;
@@ -622,6 +629,19 @@
         storageNotice.hidden = false;
         storageNotice.classList.add("is-error");
         storageMessage.textContent = error.message || "Kunne ikke åpne datafila.";
+      }
+    });
+
+    createStorageButton.addEventListener("click", async () => {
+      try {
+        const directoryHandle = await window.showDirectoryPicker({ id: "timelogg-data-directory", mode: "readwrite" });
+        const handle = await directoryHandle.getFileHandle("data.json", { create: true });
+        await connectToFile(handle);
+      } catch (error) {
+        if (error.name === "AbortError") return;
+        storageNotice.hidden = false;
+        storageNotice.classList.add("is-error");
+        storageMessage.textContent = error.message || "Kunne ikke opprette data.json i den valgte mappa.";
       }
     });
 
@@ -918,8 +938,10 @@
           storageNotice.classList.add("is-error");
           storageMessage.textContent = "Direkte fillagring støttes i Chrome og Edge. Åpne index.html i en av disse nettleserne.";
           storageButton.disabled = true;
+          createStorageButton.disabled = true;
           return;
         }
+        createStorageButton.disabled = !window.showDirectoryPicker;
 
         const handle = await getSavedFileHandle();
         if (handle) {
