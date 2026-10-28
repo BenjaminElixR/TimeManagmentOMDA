@@ -44,7 +44,37 @@
     .brand { display: flex; align-items: center; gap: 11px; font-size: 16px; font-weight: 700; }
     .brand-mark { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; color: white; background: var(--green); }
     .brand-mark svg { width: 19px; height: 19px; }
-    .today-label { color: var(--muted); font-size: 13px; }
+    .date-navigation { position: relative; display: flex; align-items: center; gap: 6px; }
+    .date-step { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--line); border-radius: 5px; color: var(--green); background: var(--surface); }
+    .date-step:hover:not(:disabled) { border-color: var(--green); background: var(--green-soft); }
+    .date-step:disabled { cursor: not-allowed; opacity: 0.45; }
+    .date-step svg { width: 16px; height: 16px; }
+    .date-input { display: inline-flex; min-width: 140px; height: 34px; align-items: center; justify-content: center; gap: 7px; padding: 0 9px; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); background: var(--surface); font: 12px "DM Sans", sans-serif; }
+    .date-input:focus { border-color: var(--green); outline: 2px solid var(--green-soft); }
+    .date-input svg { width: 15px; height: 15px; color: var(--green); }
+    .date-today { height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 5px; color: var(--green); background: var(--surface); font-size: 12px; font-weight: 700; }
+    .date-today:hover { border-color: var(--green); background: var(--green-soft); }
+    .date-calendar { position: absolute; z-index: 20; top: calc(100% + 8px); right: 0; width: 286px; padding: 13px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); box-shadow: var(--shadow); }
+    .date-calendar[hidden] { display: none; }
+    .calendar-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+    .calendar-month { flex: 1; text-align: center; font-size: 13px; font-weight: 700; text-transform: capitalize; }
+    .calendar-month-button { display: grid; width: 28px; height: 28px; place-items: center; border: 1px solid var(--line); border-radius: 4px; color: var(--green); background: white; }
+    .calendar-month-button:hover:not(:disabled) { background: var(--green-soft); }
+    .calendar-month-button:disabled { cursor: not-allowed; opacity: 0.4; }
+    .calendar-month-button svg { width: 14px; height: 14px; }
+    .calendar-weekdays, .calendar-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+    .calendar-weekdays { margin-bottom: 5px; }
+    .calendar-weekdays span { color: var(--muted); text-align: center; font-size: 10px; font-weight: 700; }
+    .calendar-day { position: relative; display: grid; width: 32px; height: 32px; place-items: center; justify-self: center; border: 0; border-radius: 50%; color: var(--ink); background: transparent; font-size: 12px; }
+    .calendar-day:hover:not(:disabled) { background: var(--green-soft); }
+    .calendar-day.outside-month { color: #a4aca4; }
+    .calendar-day.has-data:not(.selected) { color: var(--green-dark); background: #e8f0e9; font-weight: 700; }
+    .calendar-day.has-data:not(.selected)::after { position: absolute; right: 3px; bottom: 3px; width: 5px; height: 5px; border-radius: 50%; background: var(--orange); content: ""; }
+    .calendar-day.today:not(.selected) { box-shadow: inset 0 0 0 1px var(--green); }
+    .calendar-day.selected { color: white; background: var(--green); font-weight: 700; }
+    .calendar-day.selected.has-data::after { background: white; }
+    .calendar-day:disabled { cursor: not-allowed; opacity: 0.35; }
+    .calendar-note { margin: 11px 0 0; color: var(--muted); font-size: 10px; }
 
     .intro { margin-bottom: 24px; }
     .eyebrow { margin: 0 0 7px; color: var(--green); font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
@@ -114,12 +144,31 @@
     .entry-title { overflow: hidden; font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
     .entry-meta { margin-top: 3px; color: var(--muted); font-size: 11px; }
     .entry-duration { font-family: "DM Mono", monospace; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .delete-button { display: grid; width: 32px; height: 32px; place-items: center; border: 0; border-radius: 4px; color: #8b948b; background: transparent; }
-    .delete-button:hover { color: #a74433; background: #f8ece8; }
-    .delete-button svg { width: 16px; height: 16px; }
+    .entry-actions { display: flex; align-items: center; gap: 2px; }
+    .entry-action { display: grid; width: 30px; height: 30px; place-items: center; border: 0; border-radius: 4px; color: #68746a; background: transparent; }
+    .entry-action:hover:not(:disabled) { color: var(--green-dark); background: var(--green-soft); }
+    .entry-action:disabled { cursor: not-allowed; opacity: 0.4; }
+    .entry-action.delete-button:hover { color: #a74433; background: #f8ece8; }
+    .entry-action svg { width: 15px; height: 15px; }
     .empty { padding: 26px 18px; color: var(--muted); text-align: center; font-size: 13px; }
     .footer-note { margin: 16px 0 0; color: #858d84; text-align: center; font-size: 11px; }
+    .edit-dialog { width: min(460px, calc(100% - 28px)); padding: 23px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--surface); box-shadow: var(--shadow); }
+    .edit-dialog::backdrop { background: rgb(32 41 33 / 40%); }
+    .edit-dialog h2 { margin: 0; font-size: 17px; }
+    .edit-dialog-date { margin: 5px 0 18px; color: var(--muted); font-size: 12px; }
+    .edit-time-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    .edit-time-fields input { width: 100%; height: 42px; padding: 0 9px; border: 1px solid var(--line); border-radius: 5px; background: white; }
+    .edit-time-fields input:focus { border-color: var(--green); outline: 2px solid var(--green-soft); }
+    .duration-label { display: block; margin: 0 0 7px; color: #606a61; font-size: 12px; font-weight: 600; }
+    .duration-inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .duration-inputs label { display: block; margin: 0 0 6px; color: var(--muted); font-size: 11px; }
+    .edit-error { margin: 12px 0 0; color: #a74433; font-size: 12px; }
+    .edit-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+    .edit-cancel { border: 1px solid var(--line); color: var(--ink); background: white; }
+    .edit-save { color: white; background: var(--green); }
+    .edit-save:hover { background: var(--green-dark); }
     .storage-notice { display: flex; width: min(100% - 40px, 1020px); align-items: center; justify-content: space-between; gap: 12px; margin: 16px auto 0; padding: 10px 12px; border: 1px solid #d5e4d7; border-radius: 5px; color: var(--green-dark); background: #edf4ed; font-size: 12px; }
+    .storage-notice[hidden] { display: none; }
     .storage-notice.is-error { border-color: #e8c9bf; color: #8c3d2c; background: #fbefeb; }
     .storage-button { flex: 0 0 auto; padding: 7px 10px; border: 1px solid #cbd9ce; border-radius: 4px; color: var(--green-dark); background: var(--surface); font-size: 12px; font-weight: 700; }
     .storage-button:hover:not(:disabled) { border-color: var(--green); background: white; }
@@ -129,6 +178,8 @@
       .page { width: min(100% - 28px, 520px); padding-top: 23px; }
       .storage-notice { width: min(100% - 28px, 520px); }
       .topbar { margin-bottom: 35px; }
+      .topbar { flex-wrap: wrap; }
+      .date-navigation { width: 100%; margin-top: 12px; }
       .layout { grid-template-columns: 1fr; }
       .timer-panel { padding: 21px; }
       .summary-panel { padding: 20px 21px 16px; }
@@ -140,7 +191,10 @@
       .storage-notice { align-items: stretch; flex-direction: column; }
       .timer-actions { margin-top: 16px; }
       .button { padding: 0 12px; }
-      .entry { grid-template-columns: 8px minmax(0, 1fr) auto 30px; gap: 9px; padding-inline: 10px; }
+      .entry { grid-template-columns: 8px minmax(0, 1fr) auto auto; gap: 7px; padding-inline: 10px; }
+      .entry-actions { gap: 0; }
+      .entry-action { width: 27px; height: 30px; }
+      .edit-time-fields { grid-template-columns: 1fr; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -161,7 +215,29 @@
         </span>
         Timelogg
       </div>
-      <div class="today-label" id="top-date"></div>
+      <nav class="date-navigation" aria-label="Velg dato for timelogg">
+        <button class="date-step" id="previous-day" type="button" aria-label="Forrige dag" title="Forrige dag">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <button class="date-input" id="selected-date" type="button" aria-haspopup="dialog" aria-expanded="false" aria-label="Velg dato">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+          <span id="selected-date-label"></span>
+        </button>
+        <button class="date-step" id="next-day" type="button" aria-label="Neste dag" title="Neste dag">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <button class="date-today" id="today-button" type="button" hidden>I dag</button>
+        <section class="date-calendar" id="date-calendar" role="dialog" aria-label="Velg dag" hidden>
+          <div class="calendar-header">
+            <button class="calendar-month-button" id="previous-month" type="button" aria-label="Forrige måned"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+            <span class="calendar-month" id="calendar-month"></span>
+            <button class="calendar-month-button" id="next-month" type="button" aria-label="Neste måned"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+          </div>
+          <div class="calendar-weekdays" aria-hidden="true"><span>ma</span><span>ti</span><span>on</span><span>to</span><span>fr</span><span>lø</span><span>sø</span></div>
+          <div class="calendar-days" id="calendar-days"></div>
+          <p class="calendar-note">Markerte dager har registrerte økter.</p>
+        </section>
+      </nav>
     </header>
 
     <div class="intro">
@@ -229,6 +305,29 @@
     </section>
   </main>
 
+  <dialog class="edit-dialog" id="edit-session-dialog" aria-labelledby="edit-session-title">
+    <form id="edit-session-form">
+      <h2 id="edit-session-title">Endre tid</h2>
+      <p class="edit-dialog-date" id="edit-session-date"></p>
+      <div class="edit-time-fields">
+        <div class="field"><label for="edit-start">Starttid</label><input id="edit-start" type="datetime-local" required></div>
+        <div class="field"><label for="edit-end">Sluttid</label><input id="edit-end" type="datetime-local" required></div>
+        <div class="field">
+          <span class="duration-label">Varighet</span>
+          <div class="duration-inputs">
+            <div><label for="edit-hours">Timer</label><input id="edit-hours" type="number" min="0" max="999" step="1" inputmode="numeric" required></div>
+            <div><label for="edit-minutes">Minutter</label><input id="edit-minutes" type="number" min="0" max="59" step="1" inputmode="numeric" required></div>
+          </div>
+        </div>
+      </div>
+      <p class="edit-error" id="edit-error" aria-live="polite" hidden></p>
+      <div class="edit-actions">
+        <button class="button edit-cancel" id="cancel-edit" type="button">Avbryt</button>
+        <button class="button edit-save" type="submit">Lagre tid</button>
+      </div>
+    </form>
+  </dialog>
+
   <script>
     const STORAGE_KEY = "timelogg-data-v1";
     const defaultCategories = [
@@ -239,6 +338,7 @@
     const categoryColors = ["#557a95", "#b38842", "#a25b67", "#4d8580", "#78804b", "#8a6c9c"];
     const today = new Date();
     const todayKey = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, "0"), String(today.getDate()).padStart(2, "0")].join("-");
+    let selectedDayKey = todayKey;
     const dateFormatter = new Intl.DateTimeFormat("nb-NO", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
     const timeFormatter = new Intl.DateTimeFormat("nb-NO", { hour: "2-digit", minute: "2-digit" });
     const clock = document.querySelector("#clock");
@@ -253,6 +353,25 @@
     const status = document.querySelector("#timer-status");
     const statusText = document.querySelector("#status-text");
     const list = document.querySelector("#entry-list");
+    const editDialog = document.querySelector("#edit-session-dialog");
+    const editForm = document.querySelector("#edit-session-form");
+    const editStartInput = document.querySelector("#edit-start");
+    const editEndInput = document.querySelector("#edit-end");
+    const editHoursInput = document.querySelector("#edit-hours");
+    const editMinutesInput = document.querySelector("#edit-minutes");
+    const editSessionDate = document.querySelector("#edit-session-date");
+    const editError = document.querySelector("#edit-error");
+    let editingEntryId = null;
+    const selectedDateButton = document.querySelector("#selected-date");
+    const selectedDateLabel = document.querySelector("#selected-date-label");
+    const previousDayButton = document.querySelector("#previous-day");
+    const nextDayButton = document.querySelector("#next-day");
+    const todayButton = document.querySelector("#today-button");
+    const calendar = document.querySelector("#date-calendar");
+    const calendarMonthLabel = document.querySelector("#calendar-month");
+    const calendarDays = document.querySelector("#calendar-days");
+    const previousMonthButton = document.querySelector("#previous-month");
+    const nextMonthButton = document.querySelector("#next-month");
     const storageMessage = document.querySelector("#storage-message");
     const storageButton = document.querySelector("#storage-button");
     const app = document.querySelector("#app");
@@ -289,9 +408,107 @@
       return normalized;
     }
     let data = normalizeData(legacyData);
+    let calendarMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const compactDateFormatter = new Intl.DateTimeFormat("nb-NO", { day: "numeric", month: "short", year: "numeric" });
+    const monthFormatter = new Intl.DateTimeFormat("nb-NO", { month: "long", year: "numeric" });
 
-    document.querySelector("#top-date").textContent = dateFormatter.format(today);
-    document.querySelector("#summary-date").textContent = dateFormatter.format(today);
+    function dateFromKey(dayKey) {
+      const [year, month, day] = dayKey.split("-").map(Number);
+      return new Date(year, month - 1, day);
+    }
+
+    function dateKey(date) {
+      return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+    }
+
+    function renderCalendar() {
+      const monthStart = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
+      const firstGridDate = new Date(monthStart);
+      firstGridDate.setDate(firstGridDate.getDate() - ((monthStart.getDay() + 6) % 7));
+      const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      const loggedDays = new Set(data.entries.map((entry) => entry.day));
+      if (data.active?.day) loggedDays.add(data.active.day);
+
+      calendarMonthLabel.textContent = monthFormatter.format(monthStart);
+      nextMonthButton.disabled = monthStart >= currentMonthStart;
+      calendarDays.innerHTML = Array.from({ length: 42 }, (_, index) => {
+        const date = new Date(firstGridDate);
+        date.setDate(firstGridDate.getDate() + index);
+        const key = dateKey(date);
+        const isSelected = key === selectedDayKey;
+        const hasData = loggedDays.has(key);
+        const classes = ["calendar-day"];
+        if (date.getMonth() !== monthStart.getMonth()) classes.push("outside-month");
+        if (isSelected) classes.push("selected");
+        if (hasData) classes.push("has-data");
+        if (key === todayKey) classes.push("today");
+        const label = `${dateFormatter.format(date)}${hasData ? ", har registrerte økter" : ""}`;
+        return `<button class="${classes.join(" ")}" type="button" data-day="${key}" aria-label="${escapeHtml(label)}" aria-pressed="${isSelected}" ${key > todayKey ? "disabled" : ""}>${date.getDate()}</button>`;
+      }).join("");
+    }
+
+    function updateSelectedDate() {
+      selectedDateLabel.textContent = compactDateFormatter.format(dateFromKey(selectedDayKey));
+      selectedDateButton.setAttribute("aria-expanded", String(!calendar.hidden));
+      document.querySelector("#summary-date").textContent = dateFormatter.format(dateFromKey(selectedDayKey));
+      document.querySelector("#entries-heading").textContent = selectedDayKey === todayKey ? "Dagens økter" : "Økter denne dagen";
+      todayButton.hidden = selectedDayKey === todayKey;
+      nextDayButton.disabled = selectedDayKey >= todayKey;
+      renderCalendar();
+      renderEntries();
+      updateTimerState();
+    }
+
+    function moveSelectedDate(days) {
+      const selectedDate = dateFromKey(selectedDayKey);
+      selectedDate.setDate(selectedDate.getDate() + days);
+      selectedDayKey = [selectedDate.getFullYear(), String(selectedDate.getMonth() + 1).padStart(2, "0"), String(selectedDate.getDate()).padStart(2, "0")].join("-");
+      calendarMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+      updateSelectedDate();
+    }
+
+    previousDayButton.addEventListener("click", () => moveSelectedDate(-1));
+    nextDayButton.addEventListener("click", () => moveSelectedDate(1));
+    selectedDateButton.addEventListener("click", () => {
+      calendar.hidden = !calendar.hidden;
+      updateSelectedDate();
+    });
+    previousMonthButton.addEventListener("click", () => {
+      calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1);
+      renderCalendar();
+    });
+    nextMonthButton.addEventListener("click", () => {
+      calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1);
+      renderCalendar();
+    });
+    calendarDays.addEventListener("click", (event) => {
+      const dayButton = event.target.closest("[data-day]");
+      if (!dayButton || dayButton.disabled) return;
+      selectedDayKey = dayButton.dataset.day;
+      const selectedDate = dateFromKey(selectedDayKey);
+      calendarMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+      calendar.hidden = true;
+      updateSelectedDate();
+    });
+    todayButton.addEventListener("click", () => {
+      selectedDayKey = todayKey;
+      calendarMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      calendar.hidden = true;
+      updateSelectedDate();
+    });
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest(".date-navigation") && !calendar.hidden) {
+        calendar.hidden = true;
+        selectedDateButton.setAttribute("aria-expanded", "false");
+      }
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !calendar.hidden) {
+        calendar.hidden = true;
+        selectedDateButton.setAttribute("aria-expanded", "false");
+        selectedDateButton.focus();
+      }
+    });
 
     const storageNotice = document.querySelector("#storage-notice");
     let dataFileHandle = null;
@@ -309,6 +526,7 @@
         storageNotice.classList.remove("is-error");
         storageMessage.textContent = `Lagret lokalt i ${handle.name}.`;
       }, () => {
+        storageNotice.hidden = false;
         storageNotice.classList.add("is-error");
         storageMessage.textContent = "Kunne ikke skrive til datafila. Velg fila på nytt og gi skrivetilgang.";
       });
@@ -360,6 +578,7 @@
       let permission = await handle.queryPermission({ mode: "readwrite" });
       if (permission !== "granted") permission = await handle.requestPermission({ mode: "readwrite" });
       if (permission !== "granted") {
+        storageNotice.hidden = false;
         storageMessage.textContent = "Gi tilgang til å lese og skrive datafila.";
         storageButton.textContent = "Gi tilgang";
         return;
@@ -370,9 +589,11 @@
       data = contents.trim() ? normalizeData(JSON.parse(contents)) : normalizeData(legacyData);
       try { await storeFileHandle(handle); } catch {}
       renderCategories();
+      renderCalendar();
       updateTimerState();
       renderEntries();
       app.inert = false;
+      storageNotice.hidden = true;
       storageNotice.classList.remove("is-error");
       storageMessage.textContent = `Tilkoblet ${handle.name}. Endringer lagres automatisk.`;
       storageButton.textContent = "Bytt datafil";
@@ -388,13 +609,17 @@
             return;
           }
         }
-        const [handle] = await window.showOpenFilePicker({
+        const pickerOptions = {
+          id: "timelogg-data-file",
           multiple: false,
           types: [{ description: "Timelogg-data", accept: { "application/json": [".json"] } }]
-        });
+        };
+        if (dataFileHandle) pickerOptions.startIn = dataFileHandle;
+        const [handle] = await window.showOpenFilePicker(pickerOptions);
         await connectToFile(handle);
       } catch (error) {
         if (error.name === "AbortError") return;
+        storageNotice.hidden = false;
         storageNotice.classList.add("is-error");
         storageMessage.textContent = error.message || "Kunne ikke åpne datafila.";
       }
@@ -409,6 +634,35 @@
       return includeSeconds ? `${pad(hours)}:${pad(minutes)}:${pad(seconds)}` : `${pad(hours)}:${pad(minutes)}`;
     }
 
+    function toLocalDateTimeInput(timestamp) {
+      const date = new Date(timestamp);
+      const pad = (value) => String(value).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    function updateEndFromDuration() {
+      const startedAt = new Date(editStartInput.value).getTime();
+      const hours = Number(editHoursInput.value);
+      const minutes = Number(editMinutesInput.value);
+      if (!Number.isFinite(startedAt) || !Number.isInteger(hours) || hours < 0 || !Number.isInteger(minutes) || minutes < 0 || minutes > 59) return;
+      const durationMinutes = hours * 60 + minutes;
+      if (durationMinutes > 0) editEndInput.value = toLocalDateTimeInput(startedAt + durationMinutes * 60000);
+    }
+
+    function updateDurationFromEnd() {
+      const startedAt = new Date(editStartInput.value).getTime();
+      const endedAt = new Date(editEndInput.value).getTime();
+      if (!Number.isFinite(startedAt) || !Number.isFinite(endedAt) || endedAt <= startedAt) return;
+      const durationMinutes = Math.round((endedAt - startedAt) / 60000);
+      editHoursInput.value = String(Math.floor(durationMinutes / 60));
+      editMinutesInput.value = String(durationMinutes % 60);
+    }
+
+    editStartInput.addEventListener("input", updateEndFromDuration);
+    editHoursInput.addEventListener("input", updateEndFromDuration);
+    editMinutesInput.addEventListener("input", updateEndFromDuration);
+    editEndInput.addEventListener("input", updateDurationFromEnd);
+
     function activeDuration() {
       return data.active ? Date.now() - data.active.startedAt : 0;
     }
@@ -420,13 +674,14 @@
     function updateTimerState() {
       const isRunning = Boolean(data.active);
       const hasCategories = data.categories.length > 0;
+      const isTodaySelected = selectedDayKey === todayKey;
       startButton.hidden = isRunning;
-      startButton.disabled = !hasCategories;
+      startButton.disabled = !hasCategories || !isTodaySelected;
       stopButton.hidden = !isRunning;
-      categoryInput.disabled = isRunning || !hasCategories;
-      descriptionInput.disabled = isRunning;
+      categoryInput.disabled = isRunning || !hasCategories || !isTodaySelected;
+      descriptionInput.disabled = isRunning || !isTodaySelected;
       status.classList.toggle("is-running", isRunning);
-      statusText.textContent = isRunning ? `${data.active.categoryName} pågår` : "Klar til start";
+      statusText.textContent = isRunning ? `${data.active.categoryName} pågår` : isTodaySelected ? "Klar til start" : "Velg I dag for å starte en økt";
       updateClock();
     }
 
@@ -446,14 +701,14 @@
     }
 
     function renderEntries() {
-      const entries = data.entries.filter((entry) => entry.day === todayKey).sort((a, b) => b.startedAt - a.startedAt);
+      const entries = data.entries.filter((entry) => entry.day === selectedDayKey).sort((a, b) => b.startedAt - a.startedAt);
       const totals = new Map();
 
       for (const entry of entries) {
         const id = entry.categoryId || entry.category;
         totals.set(id, (totals.get(id) || 0) + entry.duration);
       }
-      if (data.active && data.active.day === todayKey) {
+      if (data.active && data.active.day === selectedDayKey) {
         totals.set(data.active.categoryId, (totals.get(data.active.categoryId) || 0) + activeDuration());
       }
 
@@ -474,7 +729,7 @@
       document.querySelector("#entry-count").textContent = `${entries.length} ${entries.length === 1 ? "økt" : "økter"}`;
 
       if (entries.length === 0) {
-        list.innerHTML = '<div class="empty">Ingen økter registrert i dag ennå.</div>';
+        list.innerHTML = `<div class="empty">Ingen økter registrert ${selectedDayKey === todayKey ? "i dag" : "denne dagen"} ennå.</div>`;
         return;
       }
 
@@ -487,7 +742,11 @@
           <span class="entry-swatch" style="background-color:${safeColor(entry.categoryColor)}" aria-hidden="true"></span>
           <div><div class="entry-title" title="${escapeHtml(label)}">${escapeHtml(label)}</div><div class="entry-meta">${escapeHtml(categoryName)} · ${start}–${end}</div></div>
           <span class="entry-duration">${formatDuration(entry.duration)}</span>
-          <button class="delete-button" type="button" data-delete="${entry.id}" aria-label="Slett økt: ${escapeHtml(label)}" title="Slett økt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M5 7l1 14h12l1-14M9 7V4h6v3"/></svg></button>
+          <div class="entry-actions">
+            <button class="entry-action" type="button" data-edit="${entry.id}" aria-label="Endre tid: ${escapeHtml(label)}" title="Endre tid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5 5 5M4 20l4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z"/></svg></button>
+            <button class="entry-action" type="button" data-resume="${entry.id}" aria-label="Start økta på nytt: ${escapeHtml(label)}" title="Start økta på nytt" ${data.active ? "disabled" : ""}><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.8c0-.8.9-1.3 1.6-.9l9.1 5.2a1 1 0 0 1 0 1.8l-9.1 5.2a1.05 1.05 0 0 1-1.6-.9V5.8Z"/></svg></button>
+            <button class="entry-action delete-button" type="button" data-delete="${entry.id}" aria-label="Slett økt: ${escapeHtml(label)}" title="Slett økt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M5 7l1 14h12l1-14M9 7V4h6v3"/></svg></button>
+          </div>
         </article>`;
       }).join("");
     }
@@ -548,6 +807,7 @@
         day: todayKey
       };
       save();
+      renderCalendar();
       updateTimerState();
       renderEntries();
     });
@@ -558,17 +818,92 @@
       data.entries.push({ ...data.active, endedAt, duration: endedAt - data.active.startedAt });
       data.active = null;
       save();
+      renderCalendar();
       descriptionInput.value = "";
       updateTimerState();
       renderEntries();
     });
 
     list.addEventListener("click", (event) => {
+      const editButton = event.target.closest("[data-edit]");
+      if (editButton) {
+        const entry = data.entries.find((item) => item.id === editButton.dataset.edit);
+        if (!entry || !dataFileHandle) return;
+        editingEntryId = entry.id;
+        editStartInput.value = toLocalDateTimeInput(entry.startedAt);
+        editEndInput.value = toLocalDateTimeInput(entry.endedAt);
+        const totalMinutes = Math.max(1, Math.round(entry.duration / 60000));
+        editHoursInput.value = String(Math.floor(totalMinutes / 60));
+        editMinutesInput.value = String(totalMinutes % 60);
+        editSessionDate.textContent = dateFormatter.format(new Date(entry.startedAt));
+        editError.hidden = true;
+        editDialog.showModal();
+        return;
+      }
+
+      const resumeButton = event.target.closest("[data-resume]");
+      if (resumeButton) {
+        if (resumeButton.disabled || !dataFileHandle || data.active) return;
+        const entry = data.entries.find((item) => item.id === resumeButton.dataset.resume);
+        if (!entry) return;
+        let category = data.categories.find((item) => item.id === entry.categoryId);
+        if (!category) {
+          category = { id: entry.categoryId || crypto.randomUUID(), name: entry.categoryName || "Slettet kategori", color: safeColor(entry.categoryColor) };
+          data.categories.push(category);
+        }
+        data.active = {
+          id: crypto.randomUUID(),
+          categoryId: category.id,
+          categoryName: category.name,
+          categoryColor: category.color,
+          description: entry.description || "",
+          startedAt: Date.now(),
+          day: todayKey
+        };
+        selectedDayKey = todayKey;
+        calendarMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        categoryInput.value = category.id;
+        descriptionInput.value = data.active.description;
+        save();
+        renderCategories();
+        updateSelectedDate();
+        return;
+      }
+
       const deleteButton = event.target.closest("[data-delete]");
       if (!dataFileHandle || !deleteButton) return;
       data.entries = data.entries.filter((entry) => entry.id !== deleteButton.dataset.delete);
       save();
+      renderCalendar();
       renderEntries();
+    });
+
+    document.querySelector("#cancel-edit").addEventListener("click", () => editDialog.close());
+    editForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const entry = data.entries.find((item) => item.id === editingEntryId);
+      if (!entry || !dataFileHandle) return;
+      const startedAt = new Date(editStartInput.value).getTime();
+      const endedAt = new Date(editEndInput.value).getTime();
+      const hours = Number(editHoursInput.value);
+      const minutes = Number(editMinutesInput.value);
+      const durationMinutes = hours * 60 + minutes;
+      if (!Number.isFinite(startedAt) || !Number.isFinite(endedAt) || endedAt <= startedAt || !Number.isInteger(hours) || hours < 0 || hours > 999 || !Number.isInteger(minutes) || minutes < 0 || minutes > 59 || durationMinutes < 1) {
+        editError.textContent = "Sluttid må være etter starttid, og varigheten må være minst ett minutt.";
+        editError.hidden = false;
+        return;
+      }
+      entry.startedAt = startedAt;
+      entry.endedAt = endedAt;
+      entry.duration = endedAt - startedAt;
+      entry.day = dateKey(new Date(startedAt));
+      selectedDayKey = entry.day;
+      calendarMonth = new Date(startedAt);
+      calendarMonth.setDate(1);
+      editingEntryId = null;
+      save();
+      editDialog.close();
+      updateSelectedDate();
     });
 
     window.setInterval(() => {
@@ -579,6 +914,7 @@
     async function initializeStorage() {
       try {
         if (!window.showOpenFilePicker || !window.isSecureContext) {
+          storageNotice.hidden = false;
           storageNotice.classList.add("is-error");
           storageMessage.textContent = "Direkte fillagring støttes i Chrome og Edge. Åpne index.html i en av disse nettleserne.";
           storageButton.disabled = true;
@@ -599,11 +935,13 @@
           storageMessage.textContent = "Velg data.json i prosjektmappa for å starte.";
         }
       } catch {
+        storageNotice.hidden = false;
         storageNotice.classList.add("is-error");
         storageMessage.textContent = "Velg data.json i prosjektmappa for å starte.";
       }
     }
 
+    updateSelectedDate();
     initializeStorage();
   </script>
 </body>
