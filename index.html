@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f4ed">
+  <title>Timelogg</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f3f4ed;
+      --surface: #fffefa;
+      --ink: #202921;
+      --muted: #788078;
+      --line: #e5e8df;
+      --green: #245c43;
+      --green-dark: #194430;
+      --green-soft: #e8f0e9;
+      --orange: #e58b60;
+      --shadow: 0 16px 42px rgb(33 52 39 / 7%);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background-color: var(--paper);
+      background-image: radial-gradient(#d9dfd4 0.65px, transparent 0.65px);
+      background-size: 15px 15px;
+      font-family: "DM Sans", sans-serif;
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .page { width: min(100% - 40px, 1020px); margin: 0 auto; padding: 38px 0 64px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 48px; }
+    .brand { display: flex; align-items: center; gap: 11px; font-size: 16px; font-weight: 700; }
+    .brand-mark { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; color: white; background: var(--green); }
+    .brand-mark svg { width: 19px; height: 19px; }
+    .today-label { color: var(--muted); font-size: 13px; }
+
+    .intro { margin-bottom: 24px; }
+    .eyebrow { margin: 0 0 7px; color: var(--green); font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(29px, 5vw, 39px); line-height: 1.1; letter-spacing: 0; }
+    .subtitle { margin: 9px 0 0; color: var(--muted); font-size: 14px; }
+
+    .layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr); gap: 20px; align-items: start; }
+    .panel { border: 1px solid rgb(222 227 217 / 85%); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow); }
+    .timer-panel { padding: 26px; }
+    .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .panel-heading h2 { margin: 0; font-size: 15px; font-weight: 700; }
+    .status { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #b9c0b8; }
+    .status.is-running { color: var(--green); }
+    .status.is-running .status-dot { background: #53a66f; box-shadow: 0 0 0 3px #e3f1e6; }
+    .clock { margin: 24px 0 27px; color: var(--green-dark); font-family: "DM Mono", monospace; font-size: clamp(52px, 9vw, 76px); line-height: 1; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+    .fields { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; }
+    .field label { display: block; margin: 0 0 7px; color: #606a61; font-size: 12px; font-weight: 600; }
+    .field input, .field select { width: 100%; height: 42px; padding: 0 12px; border: 1px solid var(--line); border-radius: 5px; outline: none; color: var(--ink); background: white; }
+    .field input:focus, .field select:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
+    .field input:disabled, .field select:disabled { color: var(--muted); background: #f5f6f2; }
+    .timer-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .button { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 9px; padding: 0 17px; border: 0; border-radius: 5px; font-weight: 700; transition: background-color 140ms ease, transform 140ms ease; }
+    .button:active { transform: translateY(1px); }
+    .button svg { width: 17px; height: 17px; }
+    .button-primary { flex: 1; color: white; background: var(--green); }
+    .button-primary:hover { background: var(--green-dark); }
+    .button-stop { color: white; background: #c56849; }
+    .button-stop:hover { background: #a95237; }
+    .category-manager { margin-top: 16px; border-top: 1px solid var(--line); }
+    .category-manager summary { padding: 14px 0 10px; color: var(--green); cursor: pointer; font-size: 12px; font-weight: 700; }
+    .category-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+    .category-form .field { min-width: 0; }
+    .category-form input { height: 38px; }
+    .add-category-button { height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: 5px; color: var(--green); background: white; font-size: 12px; font-weight: 700; }
+    .add-category-button:hover { border-color: var(--green); background: var(--green-soft); }
+    .category-error { grid-column: 1 / -1; margin: 0; color: #a74433; font-size: 12px; }
+    .category-list { display: grid; gap: 2px; margin: 10px 0 0; padding: 0; list-style: none; }
+    .category-list li { display: flex; min-height: 36px; align-items: center; justify-content: space-between; gap: 10px; color: #525d54; font-size: 12px; }
+    .category-list-name { display: inline-flex; min-width: 0; align-items: center; gap: 8px; overflow-wrap: anywhere; }
+    .category-list-name .summary-swatch { flex: 0 0 auto; }
+    .remove-category-button { padding: 5px 7px; border: 0; border-radius: 4px; color: #8b5a4b; background: transparent; font-size: 11px; }
+    .remove-category-button:hover:not(:disabled) { color: #a74433; background: #f8ece8; }
+    .remove-category-button:disabled { cursor: not-allowed; opacity: 0.45; }
+
+    .summary-panel { padding: 23px 24px 19px; }
+    .summary-date { margin: 4px 0 19px; color: var(--muted); font-size: 12px; }
+    .summary-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); font-size: 13px; }
+    .summary-item:first-of-type { border-top: 0; }
+    .summary-name { display: inline-flex; align-items: center; gap: 9px; color: #525d54; }
+    .summary-swatch { width: 9px; height: 9px; border-radius: 3px; background: var(--green); }
+    .summary-value { font-family: "DM Mono", monospace; font-size: 13px; font-variant-numeric: tabular-nums; }
+    .summary-total { margin-top: 7px; padding-top: 15px; border-top: 1px solid var(--line); }
+    .summary-total .summary-name { color: var(--ink); font-weight: 700; }
+    .summary-total .summary-value { color: var(--green); font-weight: 500; }
+
+    .entries-section { margin-top: 28px; }
+    .entries-heading { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 11px; }
+    .entries-heading h2 { margin: 0; font-size: 16px; }
+    .entry-count { color: var(--muted); font-size: 12px; }
+    .entry-list { overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+    .entry { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto auto; gap: 13px; align-items: center; min-height: 62px; padding: 10px 15px; border-bottom: 1px solid var(--line); }
+    .entry:last-child { border-bottom: 0; }
+    .entry-swatch { width: 8px; height: 32px; border-radius: 4px; background: var(--green); }
+    .entry-swatch.break { background: var(--orange); }
+    .entry-swatch.other { background: #829394; }
+    .entry-title { overflow: hidden; font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    .entry-meta { margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .entry-duration { font-family: "DM Mono", monospace; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .delete-button { display: grid; width: 32px; height: 32px; place-items: center; border: 0; border-radius: 4px; color: #8b948b; background: transparent; }
+    .delete-button:hover { color: #a74433; background: #f8ece8; }
+    .delete-button svg { width: 16px; height: 16px; }
+    .empty { padding: 26px 18px; color: var(--muted); text-align: center; font-size: 13px; }
+    .footer-note { margin: 16px 0 0; color: #858d84; text-align: center; font-size: 11px; }
+    .storage-notice { display: flex; width: min(100% - 40px, 1020px); align-items: center; justify-content: space-between; gap: 12px; margin: 16px auto 0; padding: 10px 12px; border: 1px solid #d5e4d7; border-radius: 5px; color: var(--green-dark); background: #edf4ed; font-size: 12px; }
+    .storage-notice.is-error { border-color: #e8c9bf; color: #8c3d2c; background: #fbefeb; }
+    .storage-button { flex: 0 0 auto; padding: 7px 10px; border: 1px solid #cbd9ce; border-radius: 4px; color: var(--green-dark); background: var(--surface); font-size: 12px; font-weight: 700; }
+    .storage-button:hover:not(:disabled) { border-color: var(--green); background: white; }
+    .storage-button:disabled { cursor: not-allowed; opacity: 0.6; }
+
+    @media (max-width: 700px) {
+      .page { width: min(100% - 28px, 520px); padding-top: 23px; }
+      .storage-notice { width: min(100% - 28px, 520px); }
+      .topbar { margin-bottom: 35px; }
+      .layout { grid-template-columns: 1fr; }
+      .timer-panel { padding: 21px; }
+      .summary-panel { padding: 20px 21px 16px; }
+      .entries-section { margin-top: 25px; }
+    }
+
+    @media (max-width: 420px) {
+      .fields { grid-template-columns: 1fr; gap: 11px; }
+      .storage-notice { align-items: stretch; flex-direction: column; }
+      .timer-actions { margin-top: 16px; }
+      .button { padding: 0 12px; }
+      .entry { grid-template-columns: 8px minmax(0, 1fr) auto 30px; gap: 9px; padding-inline: 10px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="storage-notice" id="storage-notice" role="status" aria-live="polite">
+    <span id="storage-message">Velg datafila for å starte.</span>
+    <button class="storage-button" id="storage-button" type="button">Velg datafil</button>
+  </div>
+  <main class="page" id="app" inert>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8.5"/><path d="M12 8v5l3 2M9 2h6M12 2v3"/></svg>
+        </span>
+        Timelogg
+      </div>
+      <div class="today-label" id="top-date"></div>
+    </header>
+
+    <div class="intro">
+      <p class="eyebrow">Dagens oversikt</p>
+      <h1>Hold styr på timene.</h1>
+      <p class="subtitle">Start klokka når du begynner. Resten ordner seg.</p>
+    </div>
+
+    <div class="layout">
+      <section class="panel timer-panel" aria-labelledby="timer-heading">
+        <div class="panel-heading">
+          <h2 id="timer-heading">Ny økt</h2>
+          <span class="status" id="timer-status"><span class="status-dot"></span><span id="status-text">Klar til start</span></span>
+        </div>
+        <div class="clock" id="clock" role="timer" aria-label="Tid på aktiv økt">00:00:00</div>
+        <div class="fields">
+          <div class="field">
+            <label for="category">Type</label>
+            <select id="category"></select>
+          </div>
+          <div class="field">
+            <label for="description">Hva jobber du med?</label>
+            <input id="description" type="text" maxlength="80" placeholder="F.eks. kundemøte eller pause">
+          </div>
+        </div>
+        <details class="category-manager">
+          <summary>Administrer kategorier</summary>
+          <form class="category-form" id="category-form">
+            <div class="field">
+              <label for="new-category">Ny kategori</label>
+              <input id="new-category" type="text" maxlength="32" placeholder="F.eks. Overtid" required>
+            </div>
+            <button class="add-category-button" type="submit">Legg til</button>
+            <p class="category-error" id="category-error" aria-live="polite" hidden></p>
+          </form>
+          <ul class="category-list" id="category-list"></ul>
+        </details>
+        <div class="timer-actions">
+          <button class="button button-primary" id="start-button" type="button">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.8c0-.8.9-1.3 1.6-.9l9.1 5.2a1 1 0 0 1 0 1.8l-9.1 5.2a1.05 1.05 0 0 1-1.6-.9V5.8Z"/></svg>
+            Start økt
+          </button>
+          <button class="button button-stop" id="stop-button" type="button" hidden>
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>
+            Stopp og lagre
+          </button>
+        </div>
+      </section>
+
+      <aside class="panel summary-panel" aria-labelledby="summary-heading">
+        <div class="panel-heading"><h2 id="summary-heading">Oppsummert</h2></div>
+        <p class="summary-date" id="summary-date"></p>
+        <div id="category-totals"></div>
+        <div class="summary-item summary-total"><span class="summary-name">Totalt registrert</span><span class="summary-value" id="total-all">00:00</span></div>
+      </aside>
+    </div>
+
+    <section class="entries-section" aria-labelledby="entries-heading">
+      <div class="entries-heading">
+        <h2 id="entries-heading">Dagens økter</h2>
+        <span class="entry-count" id="entry-count">0 økter</span>
+      </div>
+      <div class="entry-list" id="entry-list" aria-live="polite"></div>
+      <p class="footer-note">Endringer lagres automatisk direkte i den valgte datafila.</p>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "timelogg-data-v1";
+    const defaultCategories = [
+      { id: "job", name: "Jobb", color: "#245c43" },
+      { id: "break", name: "Matpause", color: "#e58b60" },
+      { id: "other", name: "Annet", color: "#728693" }
+    ];
+    const categoryColors = ["#557a95", "#b38842", "#a25b67", "#4d8580", "#78804b", "#8a6c9c"];
+    const today = new Date();
+    const todayKey = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, "0"), String(today.getDate()).padStart(2, "0")].join("-");
+    const dateFormatter = new Intl.DateTimeFormat("nb-NO", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    const timeFormatter = new Intl.DateTimeFormat("nb-NO", { hour: "2-digit", minute: "2-digit" });
+    const clock = document.querySelector("#clock");
+    const categoryInput = document.querySelector("#category");
+    const descriptionInput = document.querySelector("#description");
+    const categoryForm = document.querySelector("#category-form");
+    const newCategoryInput = document.querySelector("#new-category");
+    const categoryList = document.querySelector("#category-list");
+    const categoryError = document.querySelector("#category-error");
+    const startButton = document.querySelector("#start-button");
+    const stopButton = document.querySelector("#stop-button");
+    const status = document.querySelector("#timer-status");
+    const statusText = document.querySelector("#status-text");
+    const list = document.querySelector("#entry-list");
+    const storageMessage = document.querySelector("#storage-message");
+    const storageButton = document.querySelector("#storage-button");
+    const app = document.querySelector("#app");
+
+    let legacyData = null;
+    try {
+      legacyData = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    } catch {}
+
+    function normalizeData(value) {
+      const stored = value && typeof value === "object" ? value : {};
+      const categories = Array.isArray(stored.categories) ? stored.categories : defaultCategories.map((category) => ({ ...category }));
+      const entries = Array.isArray(stored.entries) ? stored.entries : [];
+      const normalized = {
+        ...stored,
+        categories,
+        entries: entries.map((entry) => {
+          const categoryId = entry.categoryId || entry.category;
+          const category = categories.find((item) => item.id === categoryId) || defaultCategories.find((item) => item.id === categoryId);
+          return {
+            ...entry,
+            categoryId,
+            categoryName: entry.categoryName || category?.name || "Slettet kategori",
+            categoryColor: entry.categoryColor || category?.color || "#829394"
+          };
+        }),
+        active: stored.active ? { ...stored.active } : null
+      };
+      if (normalized.active) {
+        const activeCategory = categories.find((category) => category.id === (normalized.active.categoryId || normalized.active.category));
+        normalized.active.categoryId = normalized.active.categoryId || normalized.active.category;
+        normalized.active.categoryName = normalized.active.categoryName || activeCategory?.name || "Slettet kategori";
+      }
+      return normalized;
+    }
+    let data = normalizeData(legacyData);
+
+    document.querySelector("#top-date").textContent = dateFormatter.format(today);
+    document.querySelector("#summary-date").textContent = dateFormatter.format(today);
+
+    const storageNotice = document.querySelector("#storage-notice");
+    let dataFileHandle = null;
+    let saveQueue = Promise.resolve();
+    function save() {
+      if (!dataFileHandle) return Promise.resolve();
+      const snapshot = JSON.stringify(data, null, 2) + "\n";
+      const handle = dataFileHandle;
+      saveQueue = saveQueue.catch(() => {}).then(async () => {
+        const writable = await handle.createWritable();
+        await writable.write(snapshot);
+        await writable.close();
+      });
+      saveQueue.then(() => {
+        storageNotice.classList.remove("is-error");
+        storageMessage.textContent = `Lagret lokalt i ${handle.name}.`;
+      }, () => {
+        storageNotice.classList.add("is-error");
+        storageMessage.textContent = "Kunne ikke skrive til datafila. Velg fila på nytt og gi skrivetilgang.";
+      });
+      return saveQueue;
+    }
+
+    function openHandleDatabase() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open("timelogg-file-handles", 1);
+        request.onupgradeneeded = () => request.result.createObjectStore("handles");
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function getSavedFileHandle() {
+      const database = await openHandleDatabase();
+      return new Promise((resolve, reject) => {
+        const request = database.transaction("handles").objectStore("handles").get("data-file");
+        request.onsuccess = () => {
+          database.close();
+          resolve(request.result || null);
+        };
+        request.onerror = () => {
+          database.close();
+          reject(request.error);
+        };
+      });
+    }
+
+    async function storeFileHandle(handle) {
+      const database = await openHandleDatabase();
+      return new Promise((resolve, reject) => {
+        const transaction = database.transaction("handles", "readwrite");
+        transaction.objectStore("handles").put(handle, "data-file");
+        transaction.oncomplete = () => {
+          database.close();
+          resolve();
+        };
+        transaction.onerror = () => {
+          database.close();
+          reject(transaction.error);
+        };
+      });
+    }
+
+    async function connectToFile(handle) {
+      dataFileHandle = handle;
+      let permission = await handle.queryPermission({ mode: "readwrite" });
+      if (permission !== "granted") permission = await handle.requestPermission({ mode: "readwrite" });
+      if (permission !== "granted") {
+        storageMessage.textContent = "Gi tilgang til å lese og skrive datafila.";
+        storageButton.textContent = "Gi tilgang";
+        return;
+      }
+
+      const file = await handle.getFile();
+      const contents = await file.text();
+      data = contents.trim() ? normalizeData(JSON.parse(contents)) : normalizeData(legacyData);
+      try { await storeFileHandle(handle); } catch {}
+      renderCategories();
+      updateTimerState();
+      renderEntries();
+      app.inert = false;
+      storageNotice.classList.remove("is-error");
+      storageMessage.textContent = `Tilkoblet ${handle.name}. Endringer lagres automatisk.`;
+      storageButton.textContent = "Bytt datafil";
+      if (!contents.trim()) await save();
+    }
+
+    storageButton.addEventListener("click", async () => {
+      try {
+        if (dataFileHandle && app.inert) {
+          const permission = await dataFileHandle.requestPermission({ mode: "readwrite" });
+          if (permission === "granted") {
+            await connectToFile(dataFileHandle);
+            return;
+          }
+        }
+        const [handle] = await window.showOpenFilePicker({
+          multiple: false,
+          types: [{ description: "Timelogg-data", accept: { "application/json": [".json"] } }]
+        });
+        await connectToFile(handle);
+      } catch (error) {
+        if (error.name === "AbortError") return;
+        storageNotice.classList.add("is-error");
+        storageMessage.textContent = error.message || "Kunne ikke åpne datafila.";
+      }
+    });
+
+    function formatDuration(milliseconds, includeSeconds = false) {
+      const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      const pad = (value) => String(value).padStart(2, "0");
+      return includeSeconds ? `${pad(hours)}:${pad(minutes)}:${pad(seconds)}` : `${pad(hours)}:${pad(minutes)}`;
+    }
+
+    function activeDuration() {
+      return data.active ? Date.now() - data.active.startedAt : 0;
+    }
+
+    function updateClock() {
+      clock.textContent = formatDuration(activeDuration(), true);
+    }
+
+    function updateTimerState() {
+      const isRunning = Boolean(data.active);
+      const hasCategories = data.categories.length > 0;
+      startButton.hidden = isRunning;
+      startButton.disabled = !hasCategories;
+      stopButton.hidden = !isRunning;
+      categoryInput.disabled = isRunning || !hasCategories;
+      descriptionInput.disabled = isRunning;
+      status.classList.toggle("is-running", isRunning);
+      statusText.textContent = isRunning ? `${data.active.categoryName} pågår` : "Klar til start";
+      updateClock();
+    }
+
+    function renderCategories() {
+      const selectedCategory = categoryInput.value;
+      categoryInput.innerHTML = data.categories.length
+        ? data.categories.map((category) => `<option value="${escapeHtml(category.id)}">${escapeHtml(category.name)}</option>`).join("")
+        : '<option value="">Legg til en kategori først</option>';
+      if (data.categories.some((category) => category.id === selectedCategory)) categoryInput.value = selectedCategory;
+      categoryList.innerHTML = data.categories.map((category) => {
+        const isActive = data.active?.categoryId === category.id;
+        return `<li>
+          <span class="category-list-name"><span class="summary-swatch" style="background-color:${safeColor(category.color)}"></span>${escapeHtml(category.name)}</span>
+          <button class="remove-category-button" type="button" data-remove-category="${escapeHtml(category.id)}" ${isActive ? "disabled title=\"Kategorien er i bruk\"" : ""}>Fjern</button>
+        </li>`;
+      }).join("");
+    }
+
+    function renderEntries() {
+      const entries = data.entries.filter((entry) => entry.day === todayKey).sort((a, b) => b.startedAt - a.startedAt);
+      const totals = new Map();
+
+      for (const entry of entries) {
+        const id = entry.categoryId || entry.category;
+        totals.set(id, (totals.get(id) || 0) + entry.duration);
+      }
+      if (data.active && data.active.day === todayKey) {
+        totals.set(data.active.categoryId, (totals.get(data.active.categoryId) || 0) + activeDuration());
+      }
+
+      const summaryCategories = data.categories.map((category) => ({ ...category }));
+      for (const entry of entries) {
+        const id = entry.categoryId || entry.category;
+        if (!summaryCategories.some((category) => category.id === id)) {
+          summaryCategories.push({ id, name: entry.categoryName || "Slettet kategori", color: entry.categoryColor || "#829394" });
+        }
+      }
+      const categoryTotals = document.querySelector("#category-totals");
+      categoryTotals.innerHTML = summaryCategories.map((category) => `<div class="summary-item">
+        <span class="summary-name"><span class="summary-swatch" style="background-color:${safeColor(category.color)}"></span>${escapeHtml(category.name)}</span>
+        <span class="summary-value">${formatDuration(totals.get(category.id) || 0)}</span>
+      </div>`).join("");
+      const total = [...totals.values()].reduce((sum, duration) => sum + duration, 0);
+      document.querySelector("#total-all").textContent = formatDuration(total);
+      document.querySelector("#entry-count").textContent = `${entries.length} ${entries.length === 1 ? "økt" : "økter"}`;
+
+      if (entries.length === 0) {
+        list.innerHTML = '<div class="empty">Ingen økter registrert i dag ennå.</div>';
+        return;
+      }
+
+      list.innerHTML = entries.map((entry) => {
+        const categoryName = entry.categoryName || "Slettet kategori";
+        const label = entry.description || categoryName;
+        const start = timeFormatter.format(new Date(entry.startedAt));
+        const end = timeFormatter.format(new Date(entry.endedAt));
+        return `<article class="entry">
+          <span class="entry-swatch" style="background-color:${safeColor(entry.categoryColor)}" aria-hidden="true"></span>
+          <div><div class="entry-title" title="${escapeHtml(label)}">${escapeHtml(label)}</div><div class="entry-meta">${escapeHtml(categoryName)} · ${start}–${end}</div></div>
+          <span class="entry-duration">${formatDuration(entry.duration)}</span>
+          <button class="delete-button" type="button" data-delete="${entry.id}" aria-label="Slett økt: ${escapeHtml(label)}" title="Slett økt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M5 7l1 14h12l1-14M9 7V4h6v3"/></svg></button>
+        </article>`;
+      }).join("");
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
+    }
+
+    function safeColor(value) {
+      return /^#[0-9a-f]{6}$/i.test(value) ? value : "#829394";
+    }
+
+    categoryForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (!dataFileHandle) return;
+      const name = newCategoryInput.value.trim();
+      if (!name) return;
+      if (data.categories.some((category) => category.name.toLocaleLowerCase("nb-NO") === name.toLocaleLowerCase("nb-NO"))) {
+        categoryError.textContent = "Denne kategorien finnes allerede.";
+        categoryError.hidden = false;
+        return;
+      }
+      categoryError.hidden = true;
+      data.categories.push({
+        id: crypto.randomUUID(),
+        name,
+        color: categoryColors[data.categories.length % categoryColors.length]
+      });
+      save();
+      renderCategories();
+      categoryInput.value = data.categories[data.categories.length - 1].id;
+      newCategoryInput.value = "";
+      updateTimerState();
+      renderEntries();
+      newCategoryInput.focus();
+    });
+
+    categoryList.addEventListener("click", (event) => {
+      const removeButton = event.target.closest("[data-remove-category]");
+      if (!dataFileHandle || !removeButton || removeButton.disabled) return;
+      const categoryId = removeButton.dataset.removeCategory;
+      data.categories = data.categories.filter((category) => category.id !== categoryId);
+      save();
+      renderCategories();
+      updateTimerState();
+      renderEntries();
+    });
+
+    startButton.addEventListener("click", () => {
+      if (!dataFileHandle) return;
+      data.active = {
+        id: crypto.randomUUID(),
+        categoryId: categoryInput.value,
+        categoryName: data.categories.find((category) => category.id === categoryInput.value).name,
+        categoryColor: data.categories.find((category) => category.id === categoryInput.value).color,
+        description: descriptionInput.value.trim(),
+        startedAt: Date.now(),
+        day: todayKey
+      };
+      save();
+      updateTimerState();
+      renderEntries();
+    });
+
+    stopButton.addEventListener("click", () => {
+      if (!dataFileHandle || !data.active) return;
+      const endedAt = Date.now();
+      data.entries.push({ ...data.active, endedAt, duration: endedAt - data.active.startedAt });
+      data.active = null;
+      save();
+      descriptionInput.value = "";
+      updateTimerState();
+      renderEntries();
+    });
+
+    list.addEventListener("click", (event) => {
+      const deleteButton = event.target.closest("[data-delete]");
+      if (!dataFileHandle || !deleteButton) return;
+      data.entries = data.entries.filter((entry) => entry.id !== deleteButton.dataset.delete);
+      save();
+      renderEntries();
+    });
+
+    window.setInterval(() => {
+      updateClock();
+      if (data.active) renderEntries();
+    }, 1000);
+
+    async function initializeStorage() {
+      try {
+        if (!window.showOpenFilePicker || !window.isSecureContext) {
+          storageNotice.classList.add("is-error");
+          storageMessage.textContent = "Direkte fillagring støttes i Chrome og Edge. Åpne index.html i en av disse nettleserne.";
+          storageButton.disabled = true;
+          return;
+        }
+
+        const handle = await getSavedFileHandle();
+        if (handle) {
+          dataFileHandle = handle;
+          const permission = await handle.queryPermission({ mode: "readwrite" });
+          if (permission === "granted") {
+            await connectToFile(handle);
+          } else {
+            storageMessage.textContent = "Gi tilgang til den tidligere valgte datafila.";
+            storageButton.textContent = "Gi tilgang";
+          }
+        } else {
+          storageMessage.textContent = "Velg data.json i prosjektmappa for å starte.";
+        }
+      } catch {
+        storageNotice.classList.add("is-error");
+        storageMessage.textContent = "Velg data.json i prosjektmappa for å starte.";
+      }
+    }
+
+    initializeStorage();
+  </script>
+</body>
+</html>
