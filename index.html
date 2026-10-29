@@ -116,6 +116,9 @@
     .category-list li { display: flex; min-height: 36px; align-items: center; justify-content: space-between; gap: 10px; color: #525d54; font-size: 12px; }
     .category-list-name { display: inline-flex; min-width: 0; align-items: center; gap: 8px; overflow-wrap: anywhere; }
     .category-list-name .summary-swatch { flex: 0 0 auto; }
+    .category-list-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 5px; }
+    .category-color-picker { width: 32px; height: 30px; padding: 3px; border: 1px solid var(--line); border-radius: 4px; background: white; cursor: pointer; }
+    .category-color-picker:focus { outline: 2px solid var(--green-soft); border-color: var(--green); }
     .remove-category-button { padding: 5px 7px; border: 0; border-radius: 4px; color: #8b5a4b; background: transparent; font-size: 11px; }
     .remove-category-button:hover:not(:disabled) { color: #a74433; background: #f8ece8; }
     .remove-category-button:disabled { cursor: not-allowed; opacity: 0.45; }
@@ -760,7 +763,10 @@
         const isActive = data.active?.categoryId === category.id;
         return `<li>
           <span class="category-list-name"><span class="summary-swatch" style="background-color:${safeColor(category.color)}"></span>${escapeHtml(category.name)}</span>
-          <button class="remove-category-button" type="button" data-remove-category="${escapeHtml(category.id)}" ${isActive ? "disabled title=\"Kategorien er i bruk\"" : ""}>Fjern</button>
+          <div class="category-list-actions">
+            <input class="category-color-picker" type="color" value="${safeColor(category.color)}" data-category-color="${escapeHtml(category.id)}" aria-label="Endre farge for ${escapeHtml(category.name)}" title="Endre farge">
+            <button class="remove-category-button" type="button" data-remove-category="${escapeHtml(category.id)}" ${isActive ? "disabled title=\"Kategorien er i bruk\"" : ""}>Fjern</button>
+          </div>
         </li>`;
       }).join("");
     }
@@ -954,6 +960,22 @@
       save();
       renderCategories();
       updateTimerState();
+      renderEntries();
+    });
+
+    categoryList.addEventListener("change", (event) => {
+      const colorPicker = event.target.closest("[data-category-color]");
+      if (!dataFileHandle || !colorPicker) return;
+      const category = data.categories.find((item) => item.id === colorPicker.dataset.categoryColor);
+      if (!category) return;
+      category.color = safeColor(colorPicker.value);
+      for (const entry of data.entries) {
+        if (entry.categoryId === category.id) entry.categoryColor = category.color;
+      }
+      if (data.active?.categoryId === category.id) data.active.categoryColor = category.color;
+      save();
+      renderCategories();
+      renderCalendar();
       renderEntries();
     });
 
