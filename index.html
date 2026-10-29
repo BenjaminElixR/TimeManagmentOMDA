@@ -137,6 +137,9 @@
     .entry-count { color: var(--muted); font-size: 12px; }
     .entry-list { overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
     .entry { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto auto; gap: 13px; align-items: center; min-height: 62px; padding: 10px 15px; border-bottom: 1px solid var(--line); }
+    .entry[draggable="true"] { cursor: grab; }
+    .entry.is-dragging { opacity: 0.45; }
+    .entry.drop-target { outline: 2px solid #78a789; outline-offset: -2px; background: #edf4ed; }
     .entry:last-child { border-bottom: 0; }
     .entry-swatch { width: 8px; height: 32px; border-radius: 4px; background: var(--green); }
     .entry-swatch.break { background: var(--orange); }
@@ -167,6 +170,14 @@
     .edit-cancel { border: 1px solid var(--line); color: var(--ink); background: white; }
     .edit-save { color: white; background: var(--green); }
     .edit-save:hover { background: var(--green-dark); }
+    .merge-dialog { width: min(480px, calc(100% - 28px)); }
+    .merge-summary { display: grid; gap: 8px; margin: 15px 0; padding: 12px; border-radius: 5px; background: #f3f5ef; }
+    .merge-summary-row { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; }
+    .merge-summary-row span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .merge-summary-total { padding-top: 8px; border-top: 1px solid var(--line); font-weight: 700; }
+    .merge-choice-field { margin-top: 13px; }
+    .merge-choice-field select, .merge-choice-field input { width: 100%; height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 5px; background: white; }
+    .merge-choice-field select:focus, .merge-choice-field input:focus { border-color: var(--green); outline: 2px solid var(--green-soft); }
     .storage-notice { display: flex; width: min(100% - 40px, 1020px); align-items: center; justify-content: space-between; gap: 12px; margin: 16px auto 0; padding: 10px 12px; border: 1px solid #d5e4d7; border-radius: 5px; color: var(--green-dark); background: #edf4ed; font-size: 12px; }
     .storage-notice[hidden] { display: none; }
     .storage-notice.is-error { border-color: #e8c9bf; color: #8c3d2c; background: #fbefeb; }
@@ -334,6 +345,29 @@
     </form>
   </dialog>
 
+  <dialog class="edit-dialog merge-dialog" id="merge-session-dialog" aria-labelledby="merge-session-title">
+    <form id="merge-session-form">
+      <h2 id="merge-session-title">Slå sammen økter?</h2>
+      <div class="merge-summary" id="merge-summary"></div>
+      <div class="field merge-choice-field">
+        <label for="merge-title-choice">Tittel på den sammenslåtte økta</label>
+        <select id="merge-title-choice"></select>
+      </div>
+      <div class="field merge-choice-field" id="merge-new-title-field" hidden>
+        <label for="merge-new-title">Ny tittel</label>
+        <input id="merge-new-title" type="text" maxlength="80" placeholder="Skriv en tittel">
+      </div>
+      <div class="field merge-choice-field" id="merge-category-field" hidden>
+        <label for="merge-category-choice">Kategori</label>
+        <select id="merge-category-choice"></select>
+      </div>
+      <div class="edit-actions">
+        <button class="button edit-cancel" id="cancel-merge" type="button">Avbryt</button>
+        <button class="button edit-save" type="submit">Slå sammen</button>
+      </div>
+    </form>
+  </dialog>
+
   <script>
     const STORAGE_KEY = "timelogg-data-v1";
     const defaultCategories = [
@@ -368,6 +402,17 @@
     const editSessionDate = document.querySelector("#edit-session-date");
     const editError = document.querySelector("#edit-error");
     let editingEntryId = null;
+    const mergeDialog = document.querySelector("#merge-session-dialog");
+    const mergeForm = document.querySelector("#merge-session-form");
+    const mergeSummary = document.querySelector("#merge-summary");
+    const mergeTitleChoice = document.querySelector("#merge-title-choice");
+    const mergeNewTitleField = document.querySelector("#merge-new-title-field");
+    const mergeNewTitle = document.querySelector("#merge-new-title");
+    const mergeCategoryField = document.querySelector("#merge-category-field");
+    const mergeCategoryChoice = document.querySelector("#merge-category-choice");
+    let mergeTargetId = null;
+    let mergeSourceId = null;
+    let draggedEntryId = null;
     const selectedDateButton = document.querySelector("#selected-date");
     const selectedDateLabel = document.querySelector("#selected-date-label");
     const previousDayButton = document.querySelector("#previous-day");
@@ -758,7 +803,7 @@
         const label = entry.description || categoryName;
         const start = timeFormatter.format(new Date(entry.startedAt));
         const end = timeFormatter.format(new Date(entry.endedAt));
-        return `<article class="entry">
+        return `<article class="entry" data-entry-id="${escapeHtml(entry.id)}" draggable="${dataFileHandle ? "true" : "false"}">
           <span class="entry-swatch" style="background-color:${safeColor(entry.categoryColor)}" aria-hidden="true"></span>
           <div><div class="entry-title" title="${escapeHtml(label)}">${escapeHtml(label)}</div><div class="entry-meta">${escapeHtml(categoryName)} · ${start}–${end}</div></div>
           <span class="entry-duration">${formatDuration(entry.duration)}</span>
@@ -770,6 +815,103 @@
         </article>`;
       }).join("");
     }
+
+    function entryTitle(entry) {
+      return entry.description || entry.categoryName || "Økt uten tittel";
+    }
+
+    function openMergeDialog(targetId, sourceId) {
+      if (!dataFileHandle || targetId === sourceId) return;
+      const target = data.entries.find((entry) => entry.id === targetId && entry.day === selectedDayKey);
+      const source = data.entries.find((entry) => entry.id === sourceId && entry.day === selectedDayKey);
+      if (!target || !source) return;
+
+      mergeTargetId = target.id;
+      mergeSourceId = source.id;
+      const targetTitle = entryTitle(target);
+      const sourceTitle = entryTitle(source);
+      const targetDuration = Number(target.duration) || 0;
+      const sourceDuration = Number(source.duration) || 0;
+      mergeSummary.innerHTML = `
+        <div class="merge-summary-row"><span>${escapeHtml(targetTitle)}</span><strong>${formatDuration(targetDuration)}</strong></div>
+        <div class="merge-summary-row"><span>${escapeHtml(sourceTitle)}</span><strong>${formatDuration(sourceDuration)}</strong></div>
+        <div class="merge-summary-row merge-summary-total"><span>Ny varighet</span><strong>${formatDuration(targetDuration + sourceDuration)}</strong></div>`;
+
+      const choices = [{ value: "target", label: `Behold «${targetTitle}»` }];
+      if (sourceTitle !== targetTitle) choices.push({ value: "source", label: `Behold «${sourceTitle}»` });
+      choices.push({ value: "new", label: "Skriv en ny tittel" });
+      mergeTitleChoice.innerHTML = choices.map((choice) => `<option value="${choice.value}">${escapeHtml(choice.label)}</option>`).join("");
+      mergeTitleChoice.value = "target";
+      mergeNewTitle.value = "";
+      mergeNewTitle.required = false;
+      mergeNewTitleField.hidden = true;
+
+      const categories = [target, source].filter((entry, index, entriesForMerge) => entriesForMerge.findIndex((candidate) => candidate.categoryId === entry.categoryId) === index);
+      mergeCategoryField.hidden = categories.length < 2;
+      mergeCategoryChoice.innerHTML = categories.map((entry) => `<option value="${escapeHtml(entry.categoryId)}">${escapeHtml(entry.categoryName || "Slettet kategori")}</option>`).join("");
+      mergeCategoryChoice.value = target.categoryId;
+      mergeDialog.showModal();
+    }
+
+    function finishMerge() {
+      const target = data.entries.find((entry) => entry.id === mergeTargetId);
+      const source = data.entries.find((entry) => entry.id === mergeSourceId);
+      if (!target || !source) return;
+
+      const titleChoice = mergeTitleChoice.value;
+      const title = titleChoice === "new" ? mergeNewTitle.value.trim() : entryTitle(titleChoice === "source" ? source : target);
+      if (!title) {
+        mergeNewTitle.setCustomValidity("Skriv inn en tittel.");
+        mergeNewTitle.reportValidity();
+        return;
+      }
+
+      const categoryEntry = mergeCategoryField.hidden || mergeCategoryChoice.value === target.categoryId ? target : source;
+      const duration = (Number(target.duration) || 0) + (Number(source.duration) || 0);
+      const startedAt = Math.min(target.startedAt, source.startedAt);
+      const mergedEntry = {
+        ...target,
+        id: crypto.randomUUID(),
+        description: title === categoryEntry.categoryName ? "" : title,
+        categoryId: categoryEntry.categoryId,
+        categoryName: categoryEntry.categoryName,
+        categoryColor: categoryEntry.categoryColor,
+        startedAt,
+        endedAt: startedAt + duration,
+        duration,
+        day: target.day
+      };
+
+      data.entries = data.entries.filter((entry) => entry.id !== target.id && entry.id !== source.id);
+      data.entries.push(mergedEntry);
+      mergeTargetId = null;
+      mergeSourceId = null;
+      save();
+      mergeDialog.close();
+      renderCalendar();
+      renderEntries();
+    }
+
+    mergeTitleChoice.addEventListener("change", () => {
+      const needsNewTitle = mergeTitleChoice.value === "new";
+      mergeNewTitleField.hidden = !needsNewTitle;
+      mergeNewTitle.required = needsNewTitle;
+      mergeNewTitle.setCustomValidity("");
+      if (needsNewTitle) mergeNewTitle.focus();
+    });
+
+    mergeNewTitle.addEventListener("input", () => mergeNewTitle.setCustomValidity(""));
+
+    document.querySelector("#cancel-merge").addEventListener("click", () => {
+      mergeTargetId = null;
+      mergeSourceId = null;
+      mergeDialog.close();
+    });
+
+    mergeForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      finishMerge();
+    });
 
     function escapeHtml(value) {
       return String(value).replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
@@ -842,6 +984,44 @@
       descriptionInput.value = "";
       updateTimerState();
       renderEntries();
+    });
+
+    list.addEventListener("dragstart", (event) => {
+      const entry = event.target.closest("[data-entry-id]");
+      if (!dataFileHandle || !entry || event.target.closest(".entry-action")) {
+        event.preventDefault();
+        return;
+      }
+      draggedEntryId = entry.dataset.entryId;
+      entry.classList.add("is-dragging");
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", draggedEntryId);
+    });
+
+    list.addEventListener("dragover", (event) => {
+      const target = event.target.closest("[data-entry-id]");
+      if (!draggedEntryId || !target || target.dataset.entryId === draggedEntryId) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      target.classList.add("drop-target");
+    });
+
+    list.addEventListener("dragleave", (event) => {
+      const target = event.target.closest("[data-entry-id]");
+      if (target && !target.contains(event.relatedTarget)) target.classList.remove("drop-target");
+    });
+
+    list.addEventListener("drop", (event) => {
+      const target = event.target.closest("[data-entry-id]");
+      if (!draggedEntryId || !target || target.dataset.entryId === draggedEntryId) return;
+      event.preventDefault();
+      const sourceId = event.dataTransfer.getData("text/plain") || draggedEntryId;
+      openMergeDialog(target.dataset.entryId, sourceId);
+    });
+
+    list.addEventListener("dragend", () => {
+      draggedEntryId = null;
+      list.querySelectorAll(".is-dragging, .drop-target").forEach((entry) => entry.classList.remove("is-dragging", "drop-target"));
     });
 
     list.addEventListener("click", (event) => {
