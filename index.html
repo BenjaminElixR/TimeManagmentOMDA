@@ -772,7 +772,7 @@
     }
 
     function renderEntries() {
-      const entries = data.entries.filter((entry) => entry.day === selectedDayKey).sort((a, b) => b.startedAt - a.startedAt);
+      const entries = data.entries.filter((entry) => entry.day === selectedDayKey).sort((a, b) => a.startedAt - b.startedAt);
       const totals = new Map();
 
       for (const entry of entries) {
