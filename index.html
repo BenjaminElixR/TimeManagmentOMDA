@@ -726,7 +726,7 @@
       editMinutesInput.value = String(durationMinutes % 60);
     }
 
-    editStartInput.addEventListener("input", updateEndFromDuration);
+    editStartInput.addEventListener("input", updateDurationFromEnd);
     editHoursInput.addEventListener("input", updateEndFromDuration);
     editMinutesInput.addEventListener("input", updateEndFromDuration);
     editEndInput.addEventListener("input", updateDurationFromEnd);
