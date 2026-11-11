@@ -379,8 +379,8 @@
       { id: "other", name: "Annet", color: "#728693" }
     ];
     const categoryColors = ["#557a95", "#b38842", "#a25b67", "#4d8580", "#78804b", "#8a6c9c"];
-    const today = new Date();
-    const todayKey = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, "0"), String(today.getDate()).padStart(2, "0")].join("-");
+    let today = new Date();
+    let todayKey = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, "0"), String(today.getDate()).padStart(2, "0")].join("-");
     let selectedDayKey = todayKey;
     const dateFormatter = new Intl.DateTimeFormat("nb-NO", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
     const timeFormatter = new Intl.DateTimeFormat("nb-NO", { hour: "2-digit", minute: "2-digit" });
@@ -474,6 +474,21 @@
 
     function dateKey(date) {
       return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+    }
+
+    function refreshCurrentDay(currentDate = new Date()) {
+      const currentDayKey = dateKey(currentDate);
+      if (currentDayKey === todayKey) return false;
+
+      const wasViewingToday = selectedDayKey === todayKey;
+      today = new Date(currentDate);
+      todayKey = currentDayKey;
+      if (wasViewingToday) {
+        selectedDayKey = todayKey;
+        calendarMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      }
+      updateSelectedDate();
+      return true;
     }
 
     function renderCalendar() {
@@ -1132,6 +1147,12 @@
       updateClock();
       if (data.active) renderEntries();
     }, 1000);
+
+    window.setInterval(refreshCurrentDay, 60000);
+    window.addEventListener("focus", refreshCurrentDay);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) refreshCurrentDay();
+    });
 
     async function initializeStorage() {
       try {
