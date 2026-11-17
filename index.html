@@ -747,8 +747,12 @@
     editMinutesInput.addEventListener("input", updateEndFromDuration);
     editEndInput.addEventListener("input", updateDurationFromEnd);
 
-    function activeDuration() {
+    function activeElapsedDuration() {
       return data.active ? Date.now() - data.active.startedAt : 0;
+    }
+
+    function activeDuration() {
+      return data.active ? (Number(data.active.accumulatedDuration) || 0) + activeElapsedDuration() : 0;
     }
 
     function updateClock() {
@@ -796,7 +800,7 @@
         totals.set(id, (totals.get(id) || 0) + entry.duration);
       }
       if (data.active && data.active.day === selectedDayKey) {
-        totals.set(data.active.categoryId, (totals.get(data.active.categoryId) || 0) + activeDuration());
+        totals.set(data.active.categoryId, (totals.get(data.active.categoryId) || 0) + activeElapsedDuration());
       }
 
       const summaryCategories = data.categories.map((category) => ({ ...category }));
@@ -823,16 +827,19 @@
       list.innerHTML = entries.map((entry) => {
         const categoryName = entry.categoryName || "Slettet kategori";
         const label = entry.description || categoryName;
+        const isBeingResumed = data.active?.resumeEntryId === entry.id;
+        const continueLabel = entry.day === todayKey ? "Fortsett økt" : "Start på nytt";
         const start = timeFormatter.format(new Date(entry.startedAt));
-        const end = timeFormatter.format(new Date(entry.endedAt));
-        return `<article class="entry" data-entry-id="${escapeHtml(entry.id)}" draggable="${dataFileHandle ? "true" : "false"}">
+        const end = timeFormatter.format(new Date(isBeingResumed ? Date.now() : entry.endedAt));
+        const duration = isBeingResumed ? activeDuration() : entry.duration;
+        return `<article class="entry" data-entry-id="${escapeHtml(entry.id)}" draggable="${dataFileHandle && !data.active ? "true" : "false"}">
           <span class="entry-swatch" style="background-color:${safeColor(entry.categoryColor)}" aria-hidden="true"></span>
           <div><div class="entry-title" title="${escapeHtml(label)}">${escapeHtml(label)}</div><div class="entry-meta">${escapeHtml(categoryName)} · ${start}–${end}</div></div>
-          <span class="entry-duration">${formatDuration(entry.duration)}</span>
+          <span class="entry-duration">${formatDuration(duration)}</span>
           <div class="entry-actions">
-            <button class="entry-action" type="button" data-edit="${entry.id}" aria-label="Endre tid: ${escapeHtml(label)}" title="Endre tid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5 5 5M4 20l4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z"/></svg></button>
-            <button class="entry-action" type="button" data-resume="${entry.id}" aria-label="Start økta på nytt: ${escapeHtml(label)}" title="Start økta på nytt" ${data.active ? "disabled" : ""}><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.8c0-.8.9-1.3 1.6-.9l9.1 5.2a1 1 0 0 1 0 1.8l-9.1 5.2a1.05 1.05 0 0 1-1.6-.9V5.8Z"/></svg></button>
-            <button class="entry-action delete-button" type="button" data-delete="${entry.id}" aria-label="Slett økt: ${escapeHtml(label)}" title="Slett økt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M5 7l1 14h12l1-14M9 7V4h6v3"/></svg></button>
+            <button class="entry-action" type="button" data-edit="${entry.id}" aria-label="Endre tid: ${escapeHtml(label)}" title="Endre tid" ${isBeingResumed ? "disabled" : ""}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5 5 5M4 20l4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z"/></svg></button>
+            <button class="entry-action" type="button" data-resume="${entry.id}" aria-label="${continueLabel}: ${escapeHtml(label)}" title="${continueLabel}" ${data.active ? "disabled" : ""}><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.8c0-.8.9-1.3 1.6-.9l9.1 5.2a1 1 0 0 1 0 1.8l-9.1 5.2a1.05 1.05 0 0 1-1.6-.9V5.8Z"/></svg></button>
+            <button class="entry-action delete-button" type="button" data-delete="${entry.id}" aria-label="Slett økt: ${escapeHtml(label)}" title="Slett økt" ${isBeingResumed ? "disabled" : ""}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M5 7l1 14h12l1-14M9 7V4h6v3"/></svg></button>
           </div>
         </article>`;
       }).join("");
@@ -1015,7 +1022,16 @@
     stopButton.addEventListener("click", () => {
       if (!dataFileHandle || !data.active) return;
       const endedAt = Date.now();
-      data.entries.push({ ...data.active, endedAt, duration: endedAt - data.active.startedAt });
+      const resumedEntry = data.active.resumeEntryId && data.entries.find((entry) => entry.id === data.active.resumeEntryId);
+      if (resumedEntry) {
+        resumedEntry.duration = (Number(resumedEntry.duration) || 0) + endedAt - data.active.startedAt;
+        resumedEntry.endedAt = endedAt;
+        resumedEntry.categoryId = data.active.categoryId;
+        resumedEntry.categoryName = data.active.categoryName;
+        resumedEntry.categoryColor = data.active.categoryColor;
+      } else {
+        data.entries.push({ ...data.active, endedAt, duration: activeDuration() });
+      }
       data.active = null;
       save();
       renderCalendar();
@@ -1089,14 +1105,16 @@
           category = { id: entry.categoryId || crypto.randomUUID(), name: entry.categoryName || "Slettet kategori", color: safeColor(entry.categoryColor) };
           data.categories.push(category);
         }
+        const startedAt = Date.now();
         data.active = {
           id: crypto.randomUUID(),
           categoryId: category.id,
           categoryName: category.name,
           categoryColor: category.color,
           description: entry.description || "",
-          startedAt: Date.now(),
-          day: todayKey
+          startedAt,
+          day: todayKey,
+          ...(entry.day === todayKey ? { resumeEntryId: entry.id, accumulatedDuration: Number(entry.duration) || 0 } : {})
         };
         selectedDayKey = todayKey;
         calendarMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -1109,7 +1127,7 @@
       }
 
       const deleteButton = event.target.closest("[data-delete]");
-      if (!dataFileHandle || !deleteButton) return;
+      if (!dataFileHandle || !deleteButton || deleteButton.disabled) return;
       data.entries = data.entries.filter((entry) => entry.id !== deleteButton.dataset.delete);
       save();
       renderCalendar();
