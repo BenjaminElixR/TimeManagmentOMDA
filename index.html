@@ -41,11 +41,13 @@
     button { cursor: pointer; }
 
     .page { width: min(100% - 40px, 1020px); margin: 0 auto; padding: 38px 0 64px; }
-    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 48px; }
+    .topbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-bottom: 48px; }
     .brand { display: flex; align-items: center; gap: 11px; font-size: 16px; font-weight: 700; }
     .brand-mark { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; color: white; background: var(--green); }
     .brand-mark svg { width: 19px; height: 19px; }
-    .date-navigation { position: relative; display: flex; align-items: center; gap: 6px; }
+    .date-navigation { position: relative; display: flex; align-items: center; gap: 6px; margin-left: auto; }
+    .day-edit-actions { display: flex; width: 100%; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+    .day-edit-actions[hidden] { display: none; }
     .date-step { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--line); border-radius: 5px; color: var(--green); background: var(--surface); }
     .date-step:hover:not(:disabled) { border-color: var(--green); background: var(--green-soft); }
     .date-step:disabled { cursor: not-allowed; opacity: 0.45; }
@@ -152,6 +154,7 @@
     .entry-meta { margin-top: 3px; color: var(--muted); font-size: 11px; }
     .entry-duration { font-family: "DM Mono", monospace; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .entry-actions { display: flex; align-items: center; gap: 2px; }
+    .entry-list:not([data-editing="true"]) [data-edit], .entry-list:not([data-editing="true"]) [data-delete] { display: none; }
     .entry-action { display: grid; width: 30px; height: 30px; place-items: center; border: 0; border-radius: 4px; color: #68746a; background: transparent; }
     .entry-action:hover:not(:disabled) { color: var(--green-dark); background: var(--green-soft); }
     .entry-action:disabled { cursor: not-allowed; opacity: 0.4; }
@@ -163,6 +166,10 @@
     .edit-dialog::backdrop { background: rgb(32 41 33 / 40%); }
     .edit-dialog h2 { margin: 0; font-size: 17px; }
     .edit-dialog-date { margin: 5px 0 18px; color: var(--muted); font-size: 12px; }
+    .new-entry-fields { display: grid; gap: 12px; margin-bottom: 16px; }
+    .new-entry-fields[hidden] { display: none; }
+    .new-entry-fields input, .new-entry-fields select { width: 100%; height: 42px; padding: 0 9px; border: 1px solid var(--line); border-radius: 5px; background: white; }
+    .new-entry-fields input:focus, .new-entry-fields select:focus { border-color: var(--green); outline: 2px solid var(--green-soft); }
     .edit-time-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
     .edit-time-fields input { width: 100%; height: 42px; padding: 0 9px; border: 1px solid var(--line); border-radius: 5px; background: white; }
     .edit-time-fields input:focus { border-color: var(--green); outline: 2px solid var(--green-soft); }
@@ -197,7 +204,7 @@
       .storage-notice { width: min(100% - 28px, 520px); }
       .topbar { margin-bottom: 35px; }
       .topbar { flex-wrap: wrap; }
-      .date-navigation { width: 100%; margin-top: 12px; }
+      .date-navigation { width: 100%; margin-top: 12px; margin-left: 0; }
       .layout { grid-template-columns: 1fr; }
       .timer-panel { padding: 21px; }
       .summary-panel { padding: 20px 21px 16px; }
@@ -259,6 +266,10 @@
           <p class="calendar-note">Markerte dager har registrerte økter.</p>
         </section>
       </nav>
+      <div class="day-edit-actions" id="day-edit-actions" hidden>
+        <button class="date-today" id="edit-day-button" type="button">Rediger dag</button>
+        <button class="date-today" id="add-day-entry-button" type="button" hidden>Legg til økt</button>
+      </div>
     </header>
 
     <div class="intro">
@@ -330,6 +341,10 @@
     <form id="edit-session-form">
       <h2 id="edit-session-title">Endre tid</h2>
       <p class="edit-dialog-date" id="edit-session-date"></p>
+      <div class="new-entry-fields" id="new-entry-fields" hidden>
+        <div class="field"><label for="edit-entry-title">Tittel</label><input id="edit-entry-title" type="text" maxlength="80" placeholder="Hva gjorde du?" required></div>
+        <div class="field"><label for="edit-entry-category">Kategori</label><select id="edit-entry-category" required></select></div>
+      </div>
       <div class="edit-time-fields">
         <div class="field"><label for="edit-start">Starttid</label><input id="edit-start" type="datetime-local" required></div>
         <div class="field"><label for="edit-end">Sluttid</label><input id="edit-end" type="datetime-local" required></div>
@@ -399,13 +414,20 @@
     const list = document.querySelector("#entry-list");
     const editDialog = document.querySelector("#edit-session-dialog");
     const editForm = document.querySelector("#edit-session-form");
+    const editSessionTitle = document.querySelector("#edit-session-title");
     const editStartInput = document.querySelector("#edit-start");
     const editEndInput = document.querySelector("#edit-end");
     const editHoursInput = document.querySelector("#edit-hours");
     const editMinutesInput = document.querySelector("#edit-minutes");
     const editSessionDate = document.querySelector("#edit-session-date");
     const editError = document.querySelector("#edit-error");
+    const newEntryFields = document.querySelector("#new-entry-fields");
+    const newEntryTitle = document.querySelector("#edit-entry-title");
+    const newEntryCategory = document.querySelector("#edit-entry-category");
     let editingEntryId = null;
+    let isCreatingEntry = false;
+    let dayEditingDateKey = null;
+    let lastSelectedDayKey = selectedDayKey;
     const mergeDialog = document.querySelector("#merge-session-dialog");
     const mergeForm = document.querySelector("#merge-session-form");
     const mergeSummary = document.querySelector("#merge-summary");
@@ -422,6 +444,9 @@
     const previousDayButton = document.querySelector("#previous-day");
     const nextDayButton = document.querySelector("#next-day");
     const todayButton = document.querySelector("#today-button");
+    const dayEditActions = document.querySelector("#day-edit-actions");
+    const editDayButton = document.querySelector("#edit-day-button");
+    const addDayEntryButton = document.querySelector("#add-day-entry-button");
     const calendar = document.querySelector("#date-calendar");
     const calendarMonthLabel = document.querySelector("#calendar-month");
     const calendarDays = document.querySelector("#calendar-days");
@@ -518,7 +543,24 @@
       }).join("");
     }
 
+    function isEditingSelectedDay() {
+      return Boolean(dataFileHandle && !data.active && selectedDayKey !== todayKey && dayEditingDateKey === selectedDayKey);
+    }
+
+    function updateDayEditControls() {
+      const isEditing = isEditingSelectedDay();
+      dayEditActions.hidden = !dataFileHandle || Boolean(data.active) || selectedDayKey === todayKey;
+      editDayButton.textContent = isEditing ? "Ferdig" : "Rediger dag";
+      addDayEntryButton.hidden = !isEditing;
+      addDayEntryButton.disabled = data.categories.length === 0;
+      list.dataset.editing = String(isEditing);
+    }
+
     function updateSelectedDate() {
+      if (lastSelectedDayKey !== selectedDayKey) {
+        dayEditingDateKey = null;
+        lastSelectedDayKey = selectedDayKey;
+      }
       selectedDateLabel.textContent = compactDateFormatter.format(dateFromKey(selectedDayKey));
       selectedDateButton.setAttribute("aria-expanded", String(!calendar.hidden));
       document.querySelector("#summary-date").textContent = dateFormatter.format(dateFromKey(selectedDayKey));
@@ -567,6 +609,12 @@
       calendar.hidden = true;
       updateSelectedDate();
     });
+    editDayButton.addEventListener("click", () => {
+      if (!dataFileHandle || data.active) return;
+      dayEditingDateKey = isEditingSelectedDay() ? null : selectedDayKey;
+      renderEntries();
+    });
+    addDayEntryButton.addEventListener("click", openNewEntryDialog);
     document.addEventListener("click", (event) => {
       if (!event.target.closest(".date-navigation") && !calendar.hidden) {
         calendar.hidden = true;
@@ -724,6 +772,29 @@
       return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
     }
 
+    function openNewEntryDialog() {
+      if (!dataFileHandle || !isEditingSelectedDay() || data.categories.length === 0) return;
+      isCreatingEntry = true;
+      editingEntryId = null;
+      editSessionTitle.textContent = "Legg til økt";
+      newEntryFields.hidden = false;
+      newEntryTitle.required = true;
+      newEntryCategory.required = true;
+      newEntryCategory.innerHTML = data.categories.map((category) => `<option value="${escapeHtml(category.id)}">${escapeHtml(category.name)}</option>`).join("");
+      newEntryCategory.value = categoryInput.value || data.categories[0].id;
+      newEntryTitle.value = "";
+      const startedAt = dateFromKey(selectedDayKey);
+      startedAt.setHours(9, 0, 0, 0);
+      const endedAt = new Date(startedAt.getTime() + 60 * 60000);
+      editStartInput.value = toLocalDateTimeInput(startedAt.getTime());
+      editEndInput.value = toLocalDateTimeInput(endedAt.getTime());
+      editHoursInput.value = "1";
+      editMinutesInput.value = "0";
+      editSessionDate.textContent = dateFormatter.format(dateFromKey(selectedDayKey));
+      editError.hidden = true;
+      editDialog.showModal();
+    }
+
     function updateEndFromDuration() {
       const startedAt = new Date(editStartInput.value).getTime();
       const hours = Number(editHoursInput.value);
@@ -792,6 +863,7 @@
     }
 
     function renderEntries() {
+      updateDayEditControls();
       const entries = data.entries.filter((entry) => entry.day === selectedDayKey).sort((a, b) => a.startedAt - b.startedAt);
       const totals = new Map();
 
@@ -832,7 +904,7 @@
         const start = timeFormatter.format(new Date(entry.startedAt));
         const end = timeFormatter.format(new Date(isBeingResumed ? Date.now() : entry.endedAt));
         const duration = isBeingResumed ? activeDuration() : entry.duration;
-        return `<article class="entry" data-entry-id="${escapeHtml(entry.id)}" draggable="${dataFileHandle && !data.active ? "true" : "false"}">
+        return `<article class="entry" data-entry-id="${escapeHtml(entry.id)}" draggable="${isEditingSelectedDay() ? "true" : "false"}">
           <span class="entry-swatch" style="background-color:${safeColor(entry.categoryColor)}" aria-hidden="true"></span>
           <div><div class="entry-title" title="${escapeHtml(label)}">${escapeHtml(label)}</div><div class="entry-meta">${escapeHtml(categoryName)} · ${start}–${end}</div></div>
           <span class="entry-duration">${formatDuration(duration)}</span>
@@ -850,7 +922,7 @@
     }
 
     function openMergeDialog(targetId, sourceId) {
-      if (!dataFileHandle || targetId === sourceId) return;
+      if (!isEditingSelectedDay() || targetId === sourceId) return;
       const target = data.entries.find((entry) => entry.id === targetId && entry.day === selectedDayKey);
       const source = data.entries.find((entry) => entry.id === sourceId && entry.day === selectedDayKey);
       if (!target || !source) return;
@@ -1042,7 +1114,7 @@
 
     list.addEventListener("dragstart", (event) => {
       const entry = event.target.closest("[data-entry-id]");
-      if (!dataFileHandle || !entry || event.target.closest(".entry-action")) {
+      if (!isEditingSelectedDay() || !entry || event.target.closest(".entry-action")) {
         event.preventDefault();
         return;
       }
@@ -1082,8 +1154,13 @@
       const editButton = event.target.closest("[data-edit]");
       if (editButton) {
         const entry = data.entries.find((item) => item.id === editButton.dataset.edit);
-        if (!entry || !dataFileHandle) return;
+        if (!entry || !dataFileHandle || !isEditingSelectedDay()) return;
         editingEntryId = entry.id;
+        isCreatingEntry = false;
+        editSessionTitle.textContent = "Endre tid";
+        newEntryFields.hidden = true;
+        newEntryTitle.required = false;
+        newEntryCategory.required = false;
         editStartInput.value = toLocalDateTimeInput(entry.startedAt);
         editEndInput.value = toLocalDateTimeInput(entry.endedAt);
         const totalMinutes = Math.max(1, Math.round(entry.duration / 60000));
@@ -1127,18 +1204,22 @@
       }
 
       const deleteButton = event.target.closest("[data-delete]");
-      if (!dataFileHandle || !deleteButton || deleteButton.disabled) return;
+      if (!dataFileHandle || !isEditingSelectedDay() || !deleteButton || deleteButton.disabled) return;
       data.entries = data.entries.filter((entry) => entry.id !== deleteButton.dataset.delete);
       save();
       renderCalendar();
       renderEntries();
     });
 
-    document.querySelector("#cancel-edit").addEventListener("click", () => editDialog.close());
+    document.querySelector("#cancel-edit").addEventListener("click", () => {
+      isCreatingEntry = false;
+      editingEntryId = null;
+      editDialog.close();
+    });
     editForm.addEventListener("submit", (event) => {
       event.preventDefault();
-      const entry = data.entries.find((item) => item.id === editingEntryId);
-      if (!entry || !dataFileHandle) return;
+      const entry = isCreatingEntry ? null : data.entries.find((item) => item.id === editingEntryId);
+      if (!dataFileHandle || (!isCreatingEntry && !entry)) return;
       const startedAt = new Date(editStartInput.value).getTime();
       const endedAt = new Date(editEndInput.value).getTime();
       const hours = Number(editHoursInput.value);
@@ -1149,14 +1230,36 @@
         editError.hidden = false;
         return;
       }
-      entry.startedAt = startedAt;
-      entry.endedAt = endedAt;
-      entry.duration = endedAt - startedAt;
-      entry.day = dateKey(new Date(startedAt));
-      selectedDayKey = entry.day;
+      let updatedEntry = entry;
+      if (isCreatingEntry) {
+        const category = data.categories.find((item) => item.id === newEntryCategory.value);
+        const description = newEntryTitle.value.trim();
+        if (!category || !description) return;
+        updatedEntry = {
+          id: crypto.randomUUID(),
+          categoryId: category.id,
+          categoryName: category.name,
+          categoryColor: category.color,
+          description,
+          startedAt,
+          endedAt,
+          duration: endedAt - startedAt,
+          day: dateKey(new Date(startedAt))
+        };
+        data.entries.push(updatedEntry);
+      } else {
+        updatedEntry.startedAt = startedAt;
+        updatedEntry.endedAt = endedAt;
+        updatedEntry.duration = endedAt - startedAt;
+        updatedEntry.day = dateKey(new Date(startedAt));
+      }
+      selectedDayKey = updatedEntry.day;
       calendarMonth = new Date(startedAt);
       calendarMonth.setDate(1);
+      dayEditingDateKey = selectedDayKey;
+      lastSelectedDayKey = selectedDayKey;
       editingEntryId = null;
+      isCreatingEntry = false;
       save();
       editDialog.close();
       updateSelectedDate();
@@ -1168,7 +1271,7 @@
     }, 1000);
 
     window.setInterval(refreshCurrentDay, 60000);
-    window.addEventListener("focus", refreshCurrentDay);
+    window.addEventListener("focus", () => refreshCurrentDay());
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) refreshCurrentDay();
     });
