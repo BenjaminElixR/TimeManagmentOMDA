@@ -154,7 +154,7 @@
     .entry-meta { margin-top: 3px; color: var(--muted); font-size: 11px; }
     .entry-duration { font-family: "DM Mono", monospace; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .entry-actions { display: flex; align-items: center; gap: 2px; }
-    .entry-list:not([data-editing="true"]) [data-edit], .entry-list:not([data-editing="true"]) [data-delete] { display: none; }
+    .entry-list:not([data-editing="true"]) [data-delete] { display: none; }
     .entry-action { display: grid; width: 30px; height: 30px; place-items: center; border: 0; border-radius: 4px; color: #68746a; background: transparent; }
     .entry-action:hover:not(:disabled) { color: var(--green-dark); background: var(--green-soft); }
     .entry-action:disabled { cursor: not-allowed; opacity: 0.4; }
@@ -1154,7 +1154,7 @@
       const editButton = event.target.closest("[data-edit]");
       if (editButton) {
         const entry = data.entries.find((item) => item.id === editButton.dataset.edit);
-        if (!entry || !dataFileHandle || !isEditingSelectedDay()) return;
+        if (!entry || !dataFileHandle) return;
         editingEntryId = entry.id;
         isCreatingEntry = false;
         editSessionTitle.textContent = "Endre tid";
